@@ -54,8 +54,8 @@ ifeq "$(USE_OPENSSL)" "FALSE"
     USING_OPENSSL=NO_OPENSSL
 endif
 
-OPENSSL_INCLUDE_DIR=/usr/include
-OPENSSL_LIB_DIR=/usr/lib
+OPENSSL_INCLUDE_DIR?=/usr/include
+OPENSSL_LIB_DIR?=/usr/lib
 
 AR=ar rcs
 RANLIB=ranlib

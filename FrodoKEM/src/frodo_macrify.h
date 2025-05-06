@@ -10,6 +10,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "config.h"
+#include <inttypes.h>
 
 
 void frodo_pack(unsigned char *out, const size_t outlen, const uint16_t *in, const size_t inlen, const unsigned char lsb);

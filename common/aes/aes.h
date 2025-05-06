@@ -15,6 +15,8 @@
  * @param key            Initial Key.
  * @param schedule       Abstract data structure for a key schedule.
  */
+__attribute__((annotate("scylla_opaque")))
+__attribute__((annotate("scylla_mutability(_, mut)")))
 void AES128_load_schedule(const uint8_t *key, uint8_t *schedule);
 
 /**
@@ -23,6 +25,8 @@ void AES128_load_schedule(const uint8_t *key, uint8_t *schedule);
  * if the same schedule is used for multiple encryptions since it does
  * not have to be regenerated from the key.
  */
+__attribute__((annotate("scylla_opaque")))
+__attribute__((annotate("scylla_mutability(_, _, _, mut)")))
 void AES128_ECB_enc_sch(const uint8_t *plaintext, const size_t plaintext_len, const uint8_t *schedule, uint8_t *ciphertext);
 
 /**
@@ -30,6 +34,8 @@ void AES128_ECB_enc_sch(const uint8_t *plaintext, const size_t plaintext_len, co
  *
  * @param schedule       Schedule generated with AES128_load_schedule().
  */
+__attribute__((annotate("scylla_opaque")))
+__attribute__((annotate("scylla_mutability(_)")))
 void AES128_free_schedule(uint8_t *schedule);
 
 /**
@@ -38,6 +44,8 @@ void AES128_free_schedule(uint8_t *schedule);
  * @param key            Initial Key.
  * @param schedule       Abstract data structure for a key schedule.
  */
+__attribute__((annotate("scylla_opaque")))
+__attribute__((annotate("scylla_mutability(_, mut)")))
 void AES256_load_schedule(const uint8_t *key, uint8_t *schedule);
 
 /**
@@ -46,6 +54,8 @@ void AES256_load_schedule(const uint8_t *key, uint8_t *schedule);
  * if the same schedule is used for multiple encryptions since it does
  * not have to be regenerated from the key.
  */
+__attribute__((annotate("scylla_opaque")))
+__attribute__((annotate("scylla_mutability(_, _, _, mut)")))
 void AES256_ECB_enc_sch(const uint8_t *plaintext, const size_t plaintext_len, const uint8_t *schedule, uint8_t *ciphertext);
 
 /**
@@ -53,6 +63,8 @@ void AES256_ECB_enc_sch(const uint8_t *plaintext, const size_t plaintext_len, co
  *
  * @param schedule       Schedule generated with AES256_load_schedule().
  */
+__attribute__((annotate("scylla_opaque")))
+__attribute__((annotate("scylla_mutability(_)")))
 void AES256_free_schedule(uint8_t *schedule);
 
 

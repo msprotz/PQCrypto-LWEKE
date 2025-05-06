@@ -12,6 +12,8 @@
 #include <valgrind/memcheck.h>
 #endif
 
+#include "scylla_glue.h"
+
 
 int crypto_kem_keypair(unsigned char* pk, unsigned char* sk)
 { // FrodoKEM's key generation
@@ -60,7 +62,7 @@ int crypto_kem_keypair(unsigned char* pk, unsigned char* sk)
     for (size_t i = 0; i < PARAMS_N * PARAMS_NBAR; i++) {
         S[i] = UINT16_TO_LE(S[i]);
     }
-    memcpy(sk_S, S, 2*PARAMS_N*PARAMS_NBAR);
+    memcpy(sk_S, (uint8_t *)S, 2*PARAMS_N*PARAMS_NBAR);
 
     // Add H(pk) to the secret key
     shake(sk_pkh, BYTES_PKHASH, pk, CRYPTO_PUBLICKEYBYTES);
@@ -179,7 +181,7 @@ int crypto_kem_dec(unsigned char *ss, const unsigned char *ct, const unsigned ch
     const uint8_t *salt = &ct[CRYPTO_CIPHERTEXTBYTES - BYTES_SALT];
     const uint8_t *sk_s = &sk[0];
     const uint8_t *sk_pk = &sk[CRYPTO_BYTES];
-    const uint16_t *sk_S = (uint16_t *) &sk[CRYPTO_BYTES + CRYPTO_PUBLICKEYBYTES];
+    const uint16_t *sk_S = (const uint16_t*) &sk[CRYPTO_BYTES + CRYPTO_PUBLICKEYBYTES];
     uint16_t S[PARAMS_N * PARAMS_NBAR];                                // contains secret data
     const uint8_t *sk_pkh = &sk[CRYPTO_BYTES + CRYPTO_PUBLICKEYBYTES + 2*PARAMS_N*PARAMS_NBAR];
     const uint8_t *pk_seedA = &sk_pk[0];

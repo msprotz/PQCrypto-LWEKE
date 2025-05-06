@@ -30,7 +30,7 @@ int frodo_mul_add_as_plus_e(uint16_t *out, const uint16_t *s, const uint16_t *e,
     ALIGN_HEADER(32) int16_t a_row[4*PARAMS_N] ALIGN_FOOTER(32) = {0};
 
     for (i = 0; i < (PARAMS_N*PARAMS_NBAR); i += 2) {    
-        *((uint32_t*)&out[i]) = *((uint32_t*)&e[i]);
+        *((uint32_t*)&out[i]) = *((const uint32_t*)&e[i]);
     }    
     
 #if defined(USE_AES128_FOR_A)
@@ -344,7 +344,7 @@ void frodo_key_encode(uint16_t *out, const uint16_t *in)
     for (i = 0; i < nwords; i++) {
         temp = 0;
         for(j = 0; j < PARAMS_EXTRACTED_BITS; j++) 
-            temp |= ((uint64_t)((uint8_t*)in)[i*PARAMS_EXTRACTED_BITS + j]) << (8*j);
+            temp |= ((uint64_t)((const uint8_t*)in)[i*PARAMS_EXTRACTED_BITS + j]) << (8*j);
         for (j = 0; j < npieces_word; j++) { 
             *pos = (uint16_t)((temp & mask) << (PARAMS_LOGQ - PARAMS_EXTRACTED_BITS));  
             temp >>= PARAMS_EXTRACTED_BITS;
