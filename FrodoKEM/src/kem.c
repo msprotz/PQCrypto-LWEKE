@@ -20,23 +20,26 @@ int crypto_kem_keypair(unsigned char* pk, unsigned char* sk)
   // Outputs: public key pk = pk_seedA||pk_b                      (               BYTES_SEED_A + (PARAMS_LOGQ*PARAMS_N*PARAMS_NBAR)/8 bytes)
   //          secret key sk = sk_s||pk_seedA||pk_b||sk_S||sk_pkh  (CRYPTO_BYTES + BYTES_SEED_A + (PARAMS_LOGQ*PARAMS_N*PARAMS_NBAR)/8 + 2*PARAMS_N*PARAMS_NBAR + BYTES_PKHASH bytes)
     uint8_t *pk_seedA = &pk[0];
-    uint8_t *pk_b = &pk[BYTES_SEED_A];
+#define pk_b (&pk[BYTES_SEED_A])
     uint8_t *sk_s = &sk[0];
     uint8_t *sk_pk = &sk[CRYPTO_BYTES];
     uint8_t *sk_S = &sk[CRYPTO_BYTES + CRYPTO_PUBLICKEYBYTES];
     uint8_t *sk_pkh = &sk[CRYPTO_BYTES + CRYPTO_PUBLICKEYBYTES + 2*PARAMS_N*PARAMS_NBAR];
     uint16_t B[PARAMS_N*PARAMS_NBAR] = {0};
     uint16_t S[2*PARAMS_N*PARAMS_NBAR] = {0};                          // contains secret data
-    uint16_t *E = (uint16_t *)&S[PARAMS_N*PARAMS_NBAR];                // contains secret data
+// contains secret data
+#define E ((uint16_t *)&S[PARAMS_N*PARAMS_NBAR])
     uint8_t randomness[CRYPTO_BYTES + BYTES_SEED_SE + BYTES_SEED_A];   // contains secret data via randomness_s and randomness_seedSE
-    uint8_t *randomness_s = &randomness[0];                            // contains secret data
-    uint8_t *randomness_seedSE = &randomness[CRYPTO_BYTES];            // contains secret data
-    uint8_t *randomness_z = &randomness[CRYPTO_BYTES + BYTES_SEED_SE];
     uint8_t shake_input_seedSE[1 + BYTES_SEED_SE];                     // contains secret data
 
     // Generate the secret value s, the seed for S and E, and the seed for the seed for A. Add seed_A to the public key
     if (randombytes(randomness, CRYPTO_BYTES + BYTES_SEED_SE + BYTES_SEED_A) != 0)
         return 1;
+
+    uint8_t *randomness_s = &randomness[0];                            // contains secret data
+    uint8_t *randomness_seedSE = &randomness[CRYPTO_BYTES];            // contains secret data
+    uint8_t *randomness_z = &randomness[CRYPTO_BYTES + BYTES_SEED_SE];
+
 #ifdef DO_VALGRIND_CHECK
     VALGRIND_MAKE_MEM_UNDEFINED(randomness, CRYPTO_BYTES + BYTES_SEED_SE + BYTES_SEED_A);
 #endif
@@ -76,6 +79,8 @@ int crypto_kem_keypair(unsigned char* pk, unsigned char* sk)
     VALGRIND_MAKE_MEM_DEFINED(randomness, CRYPTO_BYTES + BYTES_SEED_SE + BYTES_SEED_A);
 #endif
     return 0;
+#undef E
+#undef pk_b
 }
 
 
@@ -93,18 +98,21 @@ int crypto_kem_enc(unsigned char *ct, unsigned char *ss, const unsigned char *pk
     uint16_t C[PARAMS_NBAR*PARAMS_NBAR] = {0};
     ALIGN_HEADER(32) uint16_t Bp[PARAMS_N*PARAMS_NBAR] ALIGN_FOOTER(32) = {0};
     ALIGN_HEADER(32) uint16_t Sp[(2*PARAMS_N+PARAMS_NBAR)*PARAMS_NBAR] ALIGN_FOOTER(32) = {0};  // contains secret data
-    uint16_t *Ep = (uint16_t *)&Sp[PARAMS_N*PARAMS_NBAR];              // contains secret data
-    uint16_t *Epp = (uint16_t *)&Sp[2*PARAMS_N*PARAMS_NBAR];           // contains secret data
+// contains secret data
+#define Ep ((uint16_t *)&Sp[PARAMS_N*PARAMS_NBAR])
+// contains secret data
+#define Epp ((uint16_t *)&Sp[2*PARAMS_N*PARAMS_NBAR])
     uint8_t G2in[BYTES_PKHASH + BYTES_MU + BYTES_SALT];                // contains secret data via mu
-    uint8_t *pkh = &G2in[0];
-    uint8_t *mu = &G2in[BYTES_PKHASH];                                 // contains secret data
-    uint8_t *salt = &G2in[BYTES_PKHASH + BYTES_MU];
+#define pkh (&G2in[0])
+// contains secret data
+#define mu (&G2in[BYTES_PKHASH])
+#define salt (&G2in[BYTES_PKHASH + BYTES_MU])
     uint8_t G2out[BYTES_SEED_SE + CRYPTO_BYTES];                       // contains secret data
-    uint8_t *seedSE = &G2out[0];                                       // contains secret data
     uint8_t *k = &G2out[BYTES_SEED_SE];                                // contains secret data
     uint8_t Fin[CRYPTO_CIPHERTEXTBYTES + CRYPTO_BYTES];                // contains secret data via Fin_k
-    uint8_t *Fin_ct = &Fin[0];
-    uint8_t *Fin_k = &Fin[CRYPTO_CIPHERTEXTBYTES];                     // contains secret data
+#define Fin_ct (&Fin[0])
+// contains secret data
+#define Fin_k (&Fin[CRYPTO_CIPHERTEXTBYTES])
     uint8_t shake_input_seedSE[1 + BYTES_SEED_SE];                     // contains secret data
 
     // pkh <- G_1(pk), generate random mu and salt, compute (seedSE || k) = G_2(pkh || mu || salt)
@@ -116,6 +124,8 @@ int crypto_kem_enc(unsigned char *ct, unsigned char *ss, const unsigned char *pk
     VALGRIND_MAKE_MEM_UNDEFINED(pk, CRYPTO_PUBLICKEYBYTES);
 #endif
     shake(G2out, BYTES_SEED_SE + CRYPTO_BYTES, G2in, BYTES_PKHASH + BYTES_MU + BYTES_SALT);
+
+    uint8_t *seedSE = &G2out[0];                                       // contains secret data
 
     // Generate Sp and Ep, and compute Bp = Sp*A + Ep. Generate A on-the-fly
     shake_input_seedSE[0] = 0x96;
@@ -159,6 +169,13 @@ int crypto_kem_enc(unsigned char *ct, unsigned char *ss, const unsigned char *pk
     VALGRIND_MAKE_MEM_DEFINED(pk, CRYPTO_PUBLICKEYBYTES);
 #endif
     return 0;
+#undef Ep
+#undef Epp
+#undef pkh
+#undef mu
+#undef salt
+#undef Fin_ct
+#undef Fin_k
 }
 
 
@@ -174,8 +191,10 @@ int crypto_kem_dec(unsigned char *ss, const unsigned char *ct, const unsigned ch
     uint16_t CC[PARAMS_NBAR*PARAMS_NBAR] = {0};
     ALIGN_HEADER(32) uint16_t BBp[PARAMS_N*PARAMS_NBAR] ALIGN_FOOTER(32) = {0};
     ALIGN_HEADER(32) uint16_t Sp[(2*PARAMS_N+PARAMS_NBAR)*PARAMS_NBAR] ALIGN_FOOTER(32) = {0};  // contains secret data
-    uint16_t *Ep = (uint16_t *)&Sp[PARAMS_N*PARAMS_NBAR];              // contains secret data
-    uint16_t *Epp = (uint16_t *)&Sp[2*PARAMS_N*PARAMS_NBAR];           // contains secret data
+// contains secret data
+#define Ep ((uint16_t *)&Sp[PARAMS_N*PARAMS_NBAR])
+// contains secret data
+#define Epp ((uint16_t *)&Sp[2*PARAMS_N*PARAMS_NBAR])
     const uint8_t *ct_c1 = &ct[0];
     const uint8_t *ct_c2 = &ct[(PARAMS_LOGQ*PARAMS_N*PARAMS_NBAR)/8];
     const uint8_t *salt = &ct[CRYPTO_CIPHERTEXTBYTES - BYTES_SALT];
@@ -187,15 +206,19 @@ int crypto_kem_dec(unsigned char *ss, const unsigned char *ct, const unsigned ch
     const uint8_t *pk_seedA = &sk_pk[0];
     const uint8_t *pk_b = &sk_pk[BYTES_SEED_A];
     uint8_t G2in[BYTES_PKHASH + BYTES_MU + BYTES_SALT];                // contains secret data via muprime
-    uint8_t *pkh = &G2in[0];
-    uint8_t *muprime = &G2in[BYTES_PKHASH];                            // contains secret data
-    uint8_t *G2in_salt = &G2in[BYTES_PKHASH + BYTES_MU];
+#define pkh (&G2in[0])
+// contains secret data
+#define muprime (&G2in[BYTES_PKHASH])
+#define G2in_salt (&G2in[BYTES_PKHASH + BYTES_MU])
     uint8_t G2out[BYTES_SEED_SE + CRYPTO_BYTES];                       // contains secret data
-    uint8_t *seedSEprime = &G2out[0];                                  // contains secret data
-    uint8_t *kprime = &G2out[BYTES_SEED_SE];                           // contains secret data
+// contains secret data
+#define seedSEprime (&G2out[0])
+// contains secret data
+#define kprime (&G2out[BYTES_SEED_SE])
     uint8_t Fin[CRYPTO_CIPHERTEXTBYTES + CRYPTO_BYTES];                // contains secret data via Fin_k
-    uint8_t *Fin_ct = &Fin[0];
-    uint8_t *Fin_k = &Fin[CRYPTO_CIPHERTEXTBYTES];                     // contains secret data
+#define Fin_ct (&Fin[0])
+// contains secret data
+#define Fin_k (&Fin[CRYPTO_CIPHERTEXTBYTES])
     uint8_t shake_input_seedSEprime[1 + BYTES_SEED_SE];                // contains secret data
 
 #ifdef DO_VALGRIND_CHECK
@@ -267,4 +290,14 @@ int crypto_kem_dec(unsigned char *ss, const unsigned char *ct, const unsigned ch
     VALGRIND_MAKE_MEM_DEFINED(ct, CRYPTO_CIPHERTEXTBYTES);
 #endif
     return 0;
+
+#undef Ep
+#undef Epp
+#undef pkh
+#undef muprime
+#undef G2in_salt
+#undef seedSeprime
+#undef kprime
+#undef Fin_ct
+#undef Fin_k
 }

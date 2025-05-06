@@ -20,8 +20,6 @@ pub fn crypto_kem_dec_Frodo640(ss: &mut [u8], ct: &[u8], sk: &[u8]) -> i32
   let mut CC: [u16; 64] = [0u16; 64usize];
   let mut BBp: [u16; 5120] = [0u16; 5120usize];
   let mut Sp: [u16; 10304] = [0u16; 10304usize];
-  let Ep: &mut [u16] = &mut Sp[640i32.wrapping_mul(8i32) as usize..];
-  let Epp: &mut [u16] = &mut Sp[2i32.wrapping_mul(640i32).wrapping_mul(8i32) as usize..];
   let ct_c1: (&[u8], &[u8]) = ct.split_at(0usize);
   let ct_c2: (&[u8], &[u8]) =
       ct_c1.1.split_at(15i32.wrapping_mul(640i32).wrapping_mul(8i32).wrapping_div(8i32) as usize);
@@ -45,18 +43,8 @@ pub fn crypto_kem_dec_Frodo640(ss: &mut [u8], ct: &[u8], sk: &[u8]) -> i32
   let pk_seedA: (&[u8], &[u8]) = sk_pk.1.split_at(0usize);
   let pk_b: (&[u8], &[u8]) = pk_seedA.1.split_at(16usize);
   let mut G2in: [u8; 64] = [0u8; 64usize];
-  let pkh: (&mut [u8], &mut [u8]) = G2in.split_at_mut(0usize);
-  let muprime: (&mut [u8], &mut [u8]) = pkh.1.split_at_mut(16usize);
-  let G2in_salt: (&mut [u8], &mut [u8]) =
-      muprime.0.split_at_mut(
-        16i32.wrapping_add(2i32.wrapping_mul(8i32).wrapping_mul(8i32).wrapping_div(8i32)) as usize
-      );
   let mut G2out: [u8; 48] = [0u8; 48usize];
-  let seedSEprime: (&[u8], &[u8]) = G2out.split_at(0usize);
-  let kprime: (&[u8], &[u8]) = seedSEprime.1.split_at(2i32.wrapping_mul(16i32) as usize);
   let mut Fin: [u8; 9768] = [0u8; 9768usize];
-  let Fin_ct: (&mut [u8], &mut [u8]) = Fin.split_at_mut(0usize);
-  let Fin_k: (&mut [u8], &mut [u8]) = Fin_ct.1.split_at_mut(9752usize);
   let mut shake_input_seedSEprime: [u8; 33] = [0u8; 33usize];
   for i in 0usize..640i32.wrapping_mul(8i32) as usize { S[i] = sk_S[i] };
   crate::util::frodo_unpack(
@@ -75,11 +63,14 @@ pub fn crypto_kem_dec_Frodo640(ss: &mut [u8], ct: &[u8], sk: &[u8]) -> i32
   );
   frodo_mul_bs(&mut W, &Bp, &S);
   frodo_sub(&mut W, &C, &W);
-  frodo_key_decode(crate::scylla_glue::scylla_u16_of_u8_mut(muprime.1), &W);
-  (G2in_salt.0[0usize..16usize]).copy_from_slice(&sk_pkh.1[0usize..16usize]);
-  (G2in_salt.1[0usize..2i32.wrapping_mul(16i32) as usize]).copy_from_slice(
-    &salt.1[0usize..2i32.wrapping_mul(16i32) as usize]
-  );
+  frodo_key_decode(crate::scylla_glue::scylla_u16_of_u8_mut(&mut G2in[16usize..]), &W);
+  ((&mut G2in[0usize..])[0usize..16usize]).copy_from_slice(&sk_pkh.1[0usize..16usize]);
+  ((&mut
+  G2in[16i32.wrapping_add(2i32.wrapping_mul(8i32).wrapping_mul(8i32).wrapping_div(8i32)) as usize..])[0usize..2i32.wrapping_mul(
+    16i32
+  )
+  as
+  usize]).copy_from_slice(&salt.1[0usize..2i32.wrapping_mul(16i32) as usize]);
   crate::fips202::shake128(
     &mut G2out,
     2i32.wrapping_mul(16i32).wrapping_add(16i32) as u64,
@@ -92,7 +83,7 @@ pub fn crypto_kem_dec_Frodo640(ss: &mut [u8], ct: &[u8], sk: &[u8]) -> i32
   );
   shake_input_seedSEprime[0usize] = 150u8;
   ((&mut shake_input_seedSEprime[1usize..])[0usize..2i32.wrapping_mul(16i32) as usize]).copy_from_slice(
-    &kprime.0[0usize..2i32.wrapping_mul(16i32) as usize]
+    &(&G2out[0usize..])[0usize..2i32.wrapping_mul(16i32) as usize]
   );
   crate::fips202::shake128(
     crate::scylla_glue::scylla_u8_of_u16_mut(&mut Sp),
@@ -105,9 +96,16 @@ pub fn crypto_kem_dec_Frodo640(ss: &mut [u8], ct: &[u8], sk: &[u8]) -> i32
   for i in 0usize..2i32.wrapping_mul(640i32).wrapping_add(8i32).wrapping_mul(8i32) as usize
   { Sp[i] = Sp[i] };
   frodo_sample_n(&mut Sp, 640i32.wrapping_mul(8i32) as usize);
-  frodo_sample_n(Ep, 640i32.wrapping_mul(8i32) as usize);
-  let _ignored_stmt: i32 = frodo_mul_add_sa_plus_e(&mut BBp, &Sp, Ep, pk_b.0);
-  frodo_sample_n(Epp, 8i32.wrapping_mul(8i32) as usize);
+  frodo_sample_n(
+    &mut Sp[640i32.wrapping_mul(8i32) as usize..],
+    640i32.wrapping_mul(8i32) as usize
+  );
+  let _ignored_stmt: i32 =
+      frodo_mul_add_sa_plus_e(&mut BBp, &Sp, &mut Sp[640i32.wrapping_mul(8i32) as usize..], pk_b.0);
+  frodo_sample_n(
+    &mut Sp[2i32.wrapping_mul(640i32).wrapping_mul(8i32) as usize..],
+    8i32.wrapping_mul(8i32) as usize
+  );
   crate::util::frodo_unpack(
     &mut B,
     640i32.wrapping_mul(8i32) as usize,
@@ -115,10 +113,15 @@ pub fn crypto_kem_dec_Frodo640(ss: &mut [u8], ct: &[u8], sk: &[u8]) -> i32
     9616i32.wrapping_sub(16i32) as usize,
     15u8
   );
-  frodo_mul_add_sb_plus_e(&mut W, &B, &Sp, Epp);
-  frodo_key_encode(&mut CC, crate::scylla_glue::scylla_u16_of_u8_mut(muprime.1));
+  frodo_mul_add_sb_plus_e(
+    &mut W,
+    &B,
+    &Sp,
+    &Sp[2i32.wrapping_mul(640i32).wrapping_mul(8i32) as usize..]
+  );
+  frodo_key_encode(&mut CC, crate::scylla_glue::scylla_u16_of_u8_mut(&mut G2in[16usize..]));
   frodo_add(&mut CC, &W, &CC);
-  (Fin_k.0[0usize..9752usize]).copy_from_slice(&ct[0usize..9752usize]);
+  ((&mut Fin[0usize..])[0usize..9752usize]).copy_from_slice(&ct[0usize..9752usize]);
   for i in 0i32..640i32.wrapping_mul(8i32)
   {
     BBp[i as usize] =
@@ -128,7 +131,13 @@ pub fn crypto_kem_dec_Frodo640(ss: &mut [u8], ct: &[u8], sk: &[u8]) -> i32
       crate::util::ct_verify(&Bp, &BBp, 640i32.wrapping_mul(8i32) as usize)
       |
       crate::util::ct_verify(&C, &CC, 8i32.wrapping_mul(8i32) as usize);
-  crate::util::ct_select(Fin_k.1, kprime.1, sk_pkh.1, 16usize, selector);
+  crate::util::ct_select(
+    &mut Fin[9752usize..],
+    &G2out[2i32.wrapping_mul(16i32) as usize..],
+    sk_pkh.1,
+    16usize,
+    selector
+  );
   crate::fips202::shake128(ss, 16u64, &Fin, 9752i32.wrapping_add(16i32) as u64);
   crate::util::clear_bytes(
     crate::scylla_glue::scylla_u8_of_u16_mut(&mut W),
@@ -143,19 +152,21 @@ pub fn crypto_kem_dec_Frodo640(ss: &mut [u8], ct: &[u8], sk: &[u8]) -> i32
     (640i32.wrapping_mul(8i32) as usize).wrapping_mul(2usize)
   );
   crate::util::clear_bytes(
-    crate::scylla_glue::scylla_u8_of_u16_mut(Ep),
+    crate::scylla_glue::scylla_u8_of_u16_mut(&mut Sp[640i32.wrapping_mul(8i32) as usize..]),
     (640i32.wrapping_mul(8i32) as usize).wrapping_mul(2usize)
   );
   crate::util::clear_bytes(
-    crate::scylla_glue::scylla_u8_of_u16_mut(Epp),
+    crate::scylla_glue::scylla_u8_of_u16_mut(
+      &mut Sp[2i32.wrapping_mul(640i32).wrapping_mul(8i32) as usize..]
+    ),
     (8i32.wrapping_mul(8i32) as usize).wrapping_mul(2usize)
   );
   crate::util::clear_bytes(
-    muprime.1,
+    &mut G2in[16usize..],
     2i32.wrapping_mul(8i32).wrapping_mul(8i32).wrapping_div(8i32) as usize
   );
   crate::util::clear_bytes(&mut G2out, 2i32.wrapping_mul(16i32).wrapping_add(16i32) as usize);
-  crate::util::clear_bytes(Fin_k.1, 16usize);
+  crate::util::clear_bytes(&mut Fin[9752usize..], 16usize);
   crate::util::clear_bytes(
     &mut shake_input_seedSEprime,
     1i32.wrapping_add(2i32.wrapping_mul(16i32)) as usize
@@ -177,26 +188,15 @@ pub fn crypto_kem_enc_Frodo640(ct: &mut [u8], ss: &mut [u8], pk: &[u8]) -> i32
   let mut C: [u16; 64] = [0u16; 64usize];
   let mut Bp: [u16; 5120] = [0u16; 5120usize];
   let mut Sp: [u16; 10304] = [0u16; 10304usize];
-  let Ep: &mut [u16] = &mut Sp[640i32.wrapping_mul(8i32) as usize..];
-  let Epp: &mut [u16] = &mut Sp[2i32.wrapping_mul(640i32).wrapping_mul(8i32) as usize..];
   let mut G2in: [u8; 64] = [0u8; 64usize];
-  let pkh: (&mut [u8], &mut [u8]) = G2in.split_at_mut(0usize);
-  let mu: (&mut [u8], &mut [u8]) = pkh.1.split_at_mut(16usize);
-  let salt: (&mut [u8], &mut [u8]) =
-      mu.0.split_at_mut(
-        16i32.wrapping_add(2i32.wrapping_mul(8i32).wrapping_mul(8i32).wrapping_div(8i32)) as usize
-      );
   let mut G2out: [u8; 48] = [0u8; 48usize];
-  let seedSE: (&[u8], &[u8]) = G2out.split_at(0usize);
-  let k: (&[u8], &[u8]) = seedSE.1.split_at(2i32.wrapping_mul(16i32) as usize);
+  let k: (&[u8], &[u8]) = G2out.split_at(2i32.wrapping_mul(16i32) as usize);
   let mut Fin: [u8; 9768] = [0u8; 9768usize];
-  let Fin_ct: (&mut [u8], &mut [u8]) = Fin.split_at_mut(0usize);
-  let Fin_k: (&mut [u8], &mut [u8]) = Fin_ct.1.split_at_mut(9752usize);
   let mut shake_input_seedSE: [u8; 33] = [0u8; 33usize];
-  crate::fips202::shake128(salt.0, 16u64, pk, 9616u64);
+  crate::fips202::shake128(&mut G2in[0usize..], 16u64, pk, 9616u64);
   if
   crate::random::randombytes(
-    mu.1,
+    &mut G2in[16usize..],
     2i32.wrapping_mul(8i32).wrapping_mul(8i32).wrapping_div(8i32).wrapping_add(
       2i32.wrapping_mul(16i32)
     )
@@ -216,9 +216,10 @@ pub fn crypto_kem_enc_Frodo640(ct: &mut [u8], ss: &mut [u8], pk: &[u8]) -> i32
     as
     u64
   );
+  let seedSE: (&[u8], &[u8]) = G2out.split_at(0usize);
   shake_input_seedSE[0usize] = 150u8;
   ((&mut shake_input_seedSE[1usize..])[0usize..2i32.wrapping_mul(16i32) as usize]).copy_from_slice(
-    &k.0[0usize..2i32.wrapping_mul(16i32) as usize]
+    &seedSE.1[0usize..2i32.wrapping_mul(16i32) as usize]
   );
   crate::fips202::shake128(
     crate::scylla_glue::scylla_u8_of_u16_mut(&mut Sp),
@@ -231,8 +232,12 @@ pub fn crypto_kem_enc_Frodo640(ct: &mut [u8], ss: &mut [u8], pk: &[u8]) -> i32
   for i in 0usize..2i32.wrapping_mul(640i32).wrapping_add(8i32).wrapping_mul(8i32) as usize
   { Sp[i] = Sp[i] };
   frodo_sample_n(&mut Sp, 640i32.wrapping_mul(8i32) as usize);
-  frodo_sample_n(Ep, 640i32.wrapping_mul(8i32) as usize);
-  let _ignored_stmt: i32 = frodo_mul_add_sa_plus_e(&mut Bp, &Sp, Ep, pk_b.0);
+  frodo_sample_n(
+    &mut Sp[640i32.wrapping_mul(8i32) as usize..],
+    640i32.wrapping_mul(8i32) as usize
+  );
+  let _ignored_stmt: i32 =
+      frodo_mul_add_sa_plus_e(&mut Bp, &Sp, &mut Sp[640i32.wrapping_mul(8i32) as usize..], pk_b.0);
   crate::util::frodo_pack(
     ct_c2.0,
     15i32.wrapping_mul(640i32).wrapping_mul(8i32).wrapping_div(8i32) as usize,
@@ -240,7 +245,10 @@ pub fn crypto_kem_enc_Frodo640(ct: &mut [u8], ss: &mut [u8], pk: &[u8]) -> i32
     640i32.wrapping_mul(8i32) as usize,
     15u8
   );
-  frodo_sample_n(Epp, 8i32.wrapping_mul(8i32) as usize);
+  frodo_sample_n(
+    &mut Sp[2i32.wrapping_mul(640i32).wrapping_mul(8i32) as usize..],
+    8i32.wrapping_mul(8i32) as usize
+  );
   crate::util::frodo_unpack(
     &mut B,
     640i32.wrapping_mul(8i32) as usize,
@@ -248,8 +256,13 @@ pub fn crypto_kem_enc_Frodo640(ct: &mut [u8], ss: &mut [u8], pk: &[u8]) -> i32
     9616i32.wrapping_sub(16i32) as usize,
     15u8
   );
-  frodo_mul_add_sb_plus_e(&mut V, &B, &Sp, Epp);
-  frodo_key_encode(&mut C, crate::scylla_glue::scylla_u16_of_u8_mut(mu.1));
+  frodo_mul_add_sb_plus_e(
+    &mut V,
+    &B,
+    &Sp,
+    &Sp[2i32.wrapping_mul(640i32).wrapping_mul(8i32) as usize..]
+  );
+  frodo_key_encode(&mut C, crate::scylla_glue::scylla_u16_of_u8_mut(&mut G2in[16usize..]));
   frodo_add(&mut C, &V, &C);
   crate::util::frodo_pack(
     ct_c2.1,
@@ -262,9 +275,13 @@ pub fn crypto_kem_enc_Frodo640(ct: &mut [u8], ss: &mut [u8], pk: &[u8]) -> i32
     16i32
   )
   as
-  usize]).copy_from_slice(&salt.1[0usize..2i32.wrapping_mul(16i32) as usize]);
-  (Fin_k.0[0usize..9752usize]).copy_from_slice(&ct[0usize..9752usize]);
-  (Fin_k.1[0usize..16usize]).copy_from_slice(&k.1[0usize..16usize]);
+  usize]).copy_from_slice(
+    &(&G2in[16i32.wrapping_add(2i32.wrapping_mul(8i32).wrapping_mul(8i32).wrapping_div(8i32))
+    as
+    usize..])[0usize..2i32.wrapping_mul(16i32) as usize]
+  );
+  ((&mut Fin[0usize..])[0usize..9752usize]).copy_from_slice(&ct[0usize..9752usize]);
+  ((&mut Fin[9752usize..])[0usize..16usize]).copy_from_slice(&seedSE.1[0usize..16usize]);
   crate::fips202::shake128(ss, 16u64, &Fin, 9752i32.wrapping_add(16i32) as u64);
   crate::util::clear_bytes(
     crate::scylla_glue::scylla_u8_of_u16_mut(&mut V),
@@ -275,19 +292,21 @@ pub fn crypto_kem_enc_Frodo640(ct: &mut [u8], ss: &mut [u8], pk: &[u8]) -> i32
     (640i32.wrapping_mul(8i32) as usize).wrapping_mul(2usize)
   );
   crate::util::clear_bytes(
-    crate::scylla_glue::scylla_u8_of_u16_mut(Ep),
+    crate::scylla_glue::scylla_u8_of_u16_mut(&mut Sp[640i32.wrapping_mul(8i32) as usize..]),
     (640i32.wrapping_mul(8i32) as usize).wrapping_mul(2usize)
   );
   crate::util::clear_bytes(
-    crate::scylla_glue::scylla_u8_of_u16_mut(Epp),
+    crate::scylla_glue::scylla_u8_of_u16_mut(
+      &mut Sp[2i32.wrapping_mul(640i32).wrapping_mul(8i32) as usize..]
+    ),
     (8i32.wrapping_mul(8i32) as usize).wrapping_mul(2usize)
   );
   crate::util::clear_bytes(
-    mu.1,
+    &mut G2in[16usize..],
     2i32.wrapping_mul(8i32).wrapping_mul(8i32).wrapping_div(8i32) as usize
   );
   crate::util::clear_bytes(&mut G2out, 2i32.wrapping_mul(16i32).wrapping_add(16i32) as usize);
-  crate::util::clear_bytes(Fin_k.1, 16usize);
+  crate::util::clear_bytes(&mut Fin[9752usize..], 16usize);
   crate::util::clear_bytes(
     &mut shake_input_seedSE,
     1i32.wrapping_add(2i32.wrapping_mul(16i32)) as usize
@@ -298,7 +317,6 @@ pub fn crypto_kem_enc_Frodo640(ct: &mut [u8], ss: &mut [u8], pk: &[u8]) -> i32
 pub fn crypto_kem_keypair_Frodo640(pk: &mut [u8], sk: &mut [u8]) -> i32
 {
   let pk_seedA: (&mut [u8], &mut [u8]) = pk.split_at_mut(0usize);
-  let pk_b: (&mut [u8], &mut [u8]) = pk_seedA.1.split_at_mut(16usize);
   let sk_s: (&mut [u8], &mut [u8]) = sk.split_at_mut(0usize);
   let sk_pk: (&mut [u8], &mut [u8]) = sk_s.1.split_at_mut(16usize);
   let sk_S: (&mut [u8], &mut [u8]) = sk_pk.0.split_at_mut(16i32.wrapping_add(9616i32) as usize);
@@ -312,12 +330,7 @@ pub fn crypto_kem_keypair_Frodo640(pk: &mut [u8], sk: &mut [u8]) -> i32
       );
   let mut B: [u16; 5120] = [0u16; 5120usize];
   let mut S: [u16; 10240] = [0u16; 10240usize];
-  let E: &mut [u16] = &mut S[640i32.wrapping_mul(8i32) as usize..];
   let mut randomness: [u8; 64] = [0u8; 64usize];
-  let randomness_s: (&[u8], &[u8]) = randomness.split_at(0usize);
-  let randomness_seedSE: (&[u8], &[u8]) = randomness_s.1.split_at(16usize);
-  let randomness_z: (&[u8], &[u8]) =
-      randomness_seedSE.0.split_at(16i32.wrapping_add(2i32.wrapping_mul(16i32)) as usize);
   let mut shake_input_seedSE: [u8; 33] = [0u8; 33usize];
   if
   crate::random::randombytes(
@@ -327,7 +340,11 @@ pub fn crypto_kem_keypair_Frodo640(pk: &mut [u8], sk: &mut [u8]) -> i32
   !=
   0i32
   { return 1i32 };
-  crate::fips202::shake128(pk_b.0, 16u64, randomness_z.1, 16u64);
+  let randomness_s: (&[u8], &[u8]) = randomness.split_at(0usize);
+  let randomness_seedSE: (&[u8], &[u8]) = randomness_s.1.split_at(16usize);
+  let randomness_z: (&[u8], &[u8]) =
+      randomness_seedSE.0.split_at(16i32.wrapping_add(2i32.wrapping_mul(16i32)) as usize);
+  crate::fips202::shake128(pk_seedA.1, 16u64, randomness_z.1, 16u64);
   shake_input_seedSE[0usize] = 95u8;
   ((&mut shake_input_seedSE[1usize..])[0usize..2i32.wrapping_mul(16i32) as usize]).copy_from_slice(
     &randomness_seedSE.1[0usize..2i32.wrapping_mul(16i32) as usize]
@@ -340,10 +357,14 @@ pub fn crypto_kem_keypair_Frodo640(pk: &mut [u8], sk: &mut [u8]) -> i32
   );
   for i in 0usize..2i32.wrapping_mul(640i32).wrapping_mul(8i32) as usize { S[i] = S[i] };
   frodo_sample_n(&mut S, 640i32.wrapping_mul(8i32) as usize);
-  frodo_sample_n(E, 640i32.wrapping_mul(8i32) as usize);
-  let _ignored_stmt: i32 = frodo_mul_add_as_plus_e(&mut B, &S, E, pk);
+  frodo_sample_n(
+    &mut S[640i32.wrapping_mul(8i32) as usize..],
+    640i32.wrapping_mul(8i32) as usize
+  );
+  let _ignored_stmt: i32 =
+      frodo_mul_add_as_plus_e(&mut B, &S, &S[640i32.wrapping_mul(8i32) as usize..], pk);
   crate::util::frodo_pack(
-    pk_b.1,
+    &mut pk[16usize..],
     9616i32.wrapping_sub(16i32) as usize,
     &B,
     640i32.wrapping_mul(8i32) as usize,
@@ -365,7 +386,7 @@ pub fn crypto_kem_keypair_Frodo640(pk: &mut [u8], sk: &mut [u8]) -> i32
     (640i32.wrapping_mul(8i32) as usize).wrapping_mul(2usize)
   );
   crate::util::clear_bytes(
-    crate::scylla_glue::scylla_u8_of_u16_mut(E),
+    crate::scylla_glue::scylla_u8_of_u16_mut(&mut S[640i32.wrapping_mul(8i32) as usize..]),
     (640i32.wrapping_mul(8i32) as usize).wrapping_mul(2usize)
   );
   crate::util::clear_bytes(
