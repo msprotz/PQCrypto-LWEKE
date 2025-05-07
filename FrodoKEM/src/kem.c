@@ -23,8 +23,8 @@ int crypto_kem_keypair(unsigned char* pk, unsigned char* sk)
 #define pk_b (&pk[BYTES_SEED_A])
     uint8_t *sk_s = &sk[0];
     uint8_t *sk_pk = &sk[CRYPTO_BYTES];
-    uint8_t *sk_S = &sk[CRYPTO_BYTES + CRYPTO_PUBLICKEYBYTES];
-    uint8_t *sk_pkh = &sk[CRYPTO_BYTES + CRYPTO_PUBLICKEYBYTES + 2*PARAMS_N*PARAMS_NBAR];
+    uint8_t *sk_S = &sk[(size_t)CRYPTO_BYTES + (size_t)CRYPTO_PUBLICKEYBYTES];
+    uint8_t *sk_pkh = &sk[((size_t)CRYPTO_BYTES + (size_t)CRYPTO_PUBLICKEYBYTES) + (size_t)2*PARAMS_N*PARAMS_NBAR];
     uint16_t B[PARAMS_N*PARAMS_NBAR] = {0};
     uint16_t S[2*PARAMS_N*PARAMS_NBAR] = {0};                          // contains secret data
 // contains secret data
@@ -198,7 +198,7 @@ int crypto_kem_dec(unsigned char *ss, const unsigned char *ct, const unsigned ch
 // contains secret data
 #define Epp ((uint16_t *)&Sp[2*PARAMS_N*PARAMS_NBAR])
     const uint8_t *ct_c1 = &ct[0];
-    const uint8_t *ct_c2 = &ct[(PARAMS_LOGQ*PARAMS_N*PARAMS_NBAR)/8];
+    const uint8_t *ct_c2 = &ct[(size_t)(PARAMS_LOGQ*PARAMS_N*PARAMS_NBAR)/8];
     const uint8_t *salt = &ct[CRYPTO_CIPHERTEXTBYTES - BYTES_SALT];
     const uint8_t *sk_s = &sk[0];
     const uint8_t *sk_pk = &sk[CRYPTO_BYTES];
@@ -228,7 +228,7 @@ int crypto_kem_dec(unsigned char *ss, const unsigned char *ct, const unsigned ch
     VALGRIND_MAKE_MEM_UNDEFINED(ct, CRYPTO_CIPHERTEXTBYTES);
 #endif
 
-    for (size_t i = 0; i < PARAMS_N * PARAMS_NBAR; i++) {
+    for (unsigned int i = 0; i < PARAMS_N * PARAMS_NBAR; i++) {
         S[i] = LE_TO_UINT16(sk_S[i]);
     }
 
@@ -248,7 +248,7 @@ int crypto_kem_dec(unsigned char *ss, const unsigned char *ct, const unsigned ch
     shake_input_seedSEprime[0] = 0x96;
     memcpy(&shake_input_seedSEprime[1], seedSEprime, BYTES_SEED_SE);
     shake((uint8_t*)Sp, (2*PARAMS_N+PARAMS_NBAR)*PARAMS_NBAR*sizeof(uint16_t), shake_input_seedSEprime, 1 + BYTES_SEED_SE);
-    for (size_t i = 0; i < (2*PARAMS_N+PARAMS_NBAR)*PARAMS_NBAR; i++) {
+    for (unsigned int i = 0; i < (2*PARAMS_N+PARAMS_NBAR)*PARAMS_NBAR; i++) {
         Sp[i] = LE_TO_UINT16(Sp[i]);
     }
     frodo_sample_n(Sp, PARAMS_N*PARAMS_NBAR);
@@ -270,7 +270,7 @@ int crypto_kem_dec(unsigned char *ss, const unsigned char *ct, const unsigned ch
     memcpy(Fin_ct, ct, CRYPTO_CIPHERTEXTBYTES);
 
     // Reducing BBp modulo q
-    for (int i = 0; i < PARAMS_N*PARAMS_NBAR; i++) BBp[i] = BBp[i] & ((1 << PARAMS_LOGQ)-1);
+    for (unsigned int i = 0; i < PARAMS_N*PARAMS_NBAR; i++) BBp[i] = BBp[i] & ((1 << PARAMS_LOGQ)-1);
 
     // If (Bp == BBp & C == CC) then ss = F(ct || k'), else ss = F(ct || s)
     // Needs to avoid branching on secret data using constant-time implementation.
