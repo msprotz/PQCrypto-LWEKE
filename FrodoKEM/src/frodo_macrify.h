@@ -27,6 +27,8 @@ void frodo_mul_bs(uint16_t *out, const uint16_t *b, const uint16_t *s);
 
 void frodo_add(uint16_t *out, const uint16_t *a, const uint16_t *b);
 void frodo_sub(uint16_t *out, const uint16_t *a, const uint16_t *b);
+void frodo_add_inplace(uint16_t *out, const uint16_t *a);
+void frodo_sub_inplace(uint16_t *out, const uint16_t *a);
 void frodo_key_encode(uint16_t *out, const uint16_t *in);
 void frodo_key_decode(uint16_t *out, const uint16_t *in);
 

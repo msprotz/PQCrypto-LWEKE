@@ -46,7 +46,7 @@ else ifeq "$(GENERATION_A)" "SHAKE128"
 endif
 
 ifeq "$(ARCH)" "ARM"
-    ARM_SETTING=-lrt
+    ARM_SETTING=#-lrt
 endif
 
 USING_OPENSSL=_USE_OPENSSL_

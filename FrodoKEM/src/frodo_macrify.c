@@ -333,6 +333,27 @@ void frodo_sub(uint16_t *out, const uint16_t *a, const uint16_t *b)
     }
 }
 
+void frodo_add_inplace(uint16_t *out, const uint16_t *a) 
+{ // Add a and b
+  // Inputs: a, b (N_BAR x N_BAR)
+  // Output: c = a + b
+
+    for (int i = 0; i < (PARAMS_NBAR*PARAMS_NBAR); i++) {
+        out[i] = (a[i] + out[i]) & ((1<<PARAMS_LOGQ)-1);
+    }
+}
+
+
+void frodo_sub_inplace(uint16_t *out, const uint16_t *a) 
+{ // Subtract a and b
+  // Inputs: a, b (N_BAR x N_BAR)
+  // Output: c = a - b
+
+    for (int i = 0; i < (PARAMS_NBAR*PARAMS_NBAR); i++) {
+        out[i] = (a[i] - out[i]) & ((1<<PARAMS_LOGQ)-1);
+    }
+}
+
 
 void frodo_key_encode(uint16_t *out, const uint16_t *in) 
 { // Encoding

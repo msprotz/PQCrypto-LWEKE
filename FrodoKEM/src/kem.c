@@ -136,7 +136,9 @@ int crypto_kem_enc(unsigned char *ct, unsigned char *ss, const unsigned char *pk
     }
     frodo_sample_n(Sp, PARAMS_N*PARAMS_NBAR);
     frodo_sample_n(Ep, PARAMS_N*PARAMS_NBAR);
-    frodo_mul_add_sa_plus_e(Bp, Sp, Ep, pk_seedA);
+    uint16_t *Sp0 = Sp+0;
+    uint16_t *Ep0 = Sp+PARAMS_N*PARAMS_NBAR;
+    frodo_mul_add_sa_plus_e(Bp, Sp0, Ep0, pk_seedA);
     frodo_pack(ct_c1, (PARAMS_LOGQ*PARAMS_N*PARAMS_NBAR)/8, Bp, PARAMS_N*PARAMS_NBAR, PARAMS_LOGQ);
 
     // Generate Epp, and compute V = Sp*B + Epp
@@ -146,7 +148,7 @@ int crypto_kem_enc(unsigned char *ct, unsigned char *ss, const unsigned char *pk
 
     // Encode mu, and compute C = V + enc(mu) (mod q)
     frodo_key_encode(C, (uint16_t*)mu);
-    frodo_add(C, V, C);
+    frodo_add_inplace(C, V);
     frodo_pack(ct_c2, (PARAMS_LOGQ*PARAMS_NBAR*PARAMS_NBAR)/8, C, PARAMS_NBAR*PARAMS_NBAR, PARAMS_LOGQ);
 
     // Append salt to ct and compute ss = F(ct_c1||ct_c2||salt||k)
@@ -234,7 +236,7 @@ int crypto_kem_dec(unsigned char *ss, const unsigned char *ct, const unsigned ch
     frodo_unpack(Bp, PARAMS_N*PARAMS_NBAR, ct_c1, (PARAMS_LOGQ*PARAMS_N*PARAMS_NBAR)/8, PARAMS_LOGQ);
     frodo_unpack(C, PARAMS_NBAR*PARAMS_NBAR, ct_c2, (PARAMS_LOGQ*PARAMS_NBAR*PARAMS_NBAR)/8, PARAMS_LOGQ);
     frodo_mul_bs(W, Bp, S);
-    frodo_sub(W, C, W);
+    frodo_sub_inplace(W, C);
     frodo_key_decode((uint16_t*)muprime, W);
 
     // Generate (seedSE' || k') = G_2(pkh || mu' || salt)
@@ -251,7 +253,9 @@ int crypto_kem_dec(unsigned char *ss, const unsigned char *ct, const unsigned ch
     }
     frodo_sample_n(Sp, PARAMS_N*PARAMS_NBAR);
     frodo_sample_n(Ep, PARAMS_N*PARAMS_NBAR);
-    frodo_mul_add_sa_plus_e(BBp, Sp, Ep, pk_seedA);
+    uint16_t *Sp0 = Sp+0;
+    uint16_t *Ep0 = Sp+PARAMS_N*PARAMS_NBAR;
+    frodo_mul_add_sa_plus_e(BBp, Sp0, Ep0, pk_seedA);
 
     // Generate Epp, and compute W = Sp*B + Epp
     frodo_sample_n(Epp, PARAMS_NBAR*PARAMS_NBAR);
@@ -260,7 +264,7 @@ int crypto_kem_dec(unsigned char *ss, const unsigned char *ct, const unsigned ch
 
     // Encode mu, and compute CC = W + enc(mu') (mod q)
     frodo_key_encode(CC, (uint16_t*)muprime);
-    frodo_add(CC, W, CC);
+    frodo_add_inplace(CC, W);
 
     // Prepare input to F
     memcpy(Fin_ct, ct, CRYPTO_CIPHERTEXTBYTES);

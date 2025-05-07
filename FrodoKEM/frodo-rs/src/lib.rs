@@ -4,3 +4,4 @@ pub mod scylla_glue;
 pub mod fips202;
 pub mod util;
 pub mod frodo640;
+pub mod ffi;
