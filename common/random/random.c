@@ -18,9 +18,13 @@
 #define passed 0 
 #define failed 1
 
+#include <string.h>
+
 
 int randombytes(unsigned char* random_array, unsigned long long nbytes)
 { // Generation of "nbytes" of random values
+  /* memset(random_array, 0, nbytes); */
+  /* return passed; */
     
 #if defined(WINDOWS)   
     if (!BCRYPT_SUCCESS(BCryptGenRandom(NULL, random_array, (unsigned long)nbytes, BCRYPT_USE_SYSTEM_PREFERRED_RNG))) {

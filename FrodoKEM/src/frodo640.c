@@ -10,8 +10,8 @@
 
 
 // Parameters for "FrodoKEM-640"
-#define PARAMS_N 640U
-#define PARAMS_NBAR 8U
+#define PARAMS_N 640
+#define PARAMS_NBAR 8
 #define PARAMS_LOGQ 15
 #define PARAMS_Q (1 << PARAMS_LOGQ)
 #define PARAMS_EXTRACTED_BITS 2

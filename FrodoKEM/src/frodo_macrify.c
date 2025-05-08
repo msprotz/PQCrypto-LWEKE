@@ -317,7 +317,7 @@ void frodo_add(uint16_t *out, const uint16_t *a, const uint16_t *b)
   // Inputs: a, b (N_BAR x N_BAR)
   // Output: c = a + b
 
-    for (unsigned int i = 0; i < (PARAMS_NBAR*PARAMS_NBAR); i++) {
+    for (int i = 0; i < (PARAMS_NBAR*PARAMS_NBAR); i++) {
         out[i] = (a[i] + b[i]) & ((1<<PARAMS_LOGQ)-1);
     }
 }
@@ -328,7 +328,7 @@ void frodo_sub(uint16_t *out, const uint16_t *a, const uint16_t *b)
   // Inputs: a, b (N_BAR x N_BAR)
   // Output: c = a - b
 
-    for (unsigned int i = 0; i < (PARAMS_NBAR*PARAMS_NBAR); i++) {
+    for (int i = 0; i < (PARAMS_NBAR*PARAMS_NBAR); i++) {
         out[i] = (a[i] - b[i]) & ((1<<PARAMS_LOGQ)-1);
     }
 }
@@ -338,7 +338,7 @@ void frodo_add_inplace(uint16_t *out, const uint16_t *a)
   // Inputs: a, b (N_BAR x N_BAR)
   // Output: c = a + b
 
-    for (unsigned int i = 0; i < (PARAMS_NBAR*PARAMS_NBAR); i++) {
+    for (int i = 0; i < (PARAMS_NBAR*PARAMS_NBAR); i++) {
         out[i] = (a[i] + out[i]) & ((1<<PARAMS_LOGQ)-1);
     }
 }
@@ -349,7 +349,7 @@ void frodo_sub_inplace(uint16_t *out, const uint16_t *a)
   // Inputs: a, b (N_BAR x N_BAR)
   // Output: c = a - b
 
-    for (unsigned int i = 0; i < (PARAMS_NBAR*PARAMS_NBAR); i++) {
+    for (int i = 0; i < (PARAMS_NBAR*PARAMS_NBAR); i++) {
         out[i] = (a[i] - out[i]) & ((1<<PARAMS_LOGQ)-1);
     }
 }

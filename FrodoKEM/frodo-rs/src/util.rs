@@ -5,6 +5,8 @@
 #![allow(unreachable_patterns)]
 #![allow(unused_mut)]
 
+use aligned::*;
+
 pub fn clear_bytes(mem: &mut [u8], n: usize)
 {
   let v: (&mut [u8], &mut [u8]) = mem.split_at_mut(0usize);

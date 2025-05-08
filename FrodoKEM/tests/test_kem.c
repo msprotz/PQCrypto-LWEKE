@@ -25,7 +25,7 @@ static int kem_test(const char *named_parameters, int iterations)
     uint8_t sk[CRYPTO_SECRETKEYBYTES];
     uint8_t ss_encap[CRYPTO_BYTES], ss_decap[CRYPTO_BYTES];
     uint8_t ct[CRYPTO_CIPHERTEXTBYTES];
-    unsigned char bytes[4];
+    unsigned char bytes[4] = { 0xac, 0xe7, 0x04, 0xe3 };
     uint32_t* pos = (uint32_t*)bytes;
     uint8_t Fin[CRYPTO_CIPHERTEXTBYTES + CRYPTO_BYTES];
 

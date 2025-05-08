@@ -14,6 +14,20 @@
 
 #include "scylla_glue.h"
 
+#include <stdio.h>
+
+#ifndef SCYLLA
+static inline void debug(const char *prefix, const uint8_t *data, size_t len) {
+  return;
+  printf("DEBUG %s: [", prefix);
+  for (size_t i = 0; i < len; ++i) {
+    printf("%02hhx", data[i]);
+    if (i != len - 1)
+      printf(", ");
+  }
+  printf("]\n");
+}
+#endif
 
 int crypto_kem_keypair(unsigned char* pk, unsigned char* sk)
 { // FrodoKEM's key generation
@@ -23,10 +37,10 @@ int crypto_kem_keypair(unsigned char* pk, unsigned char* sk)
 #define pk_b (&pk[BYTES_SEED_A])
     uint8_t *sk_s = &sk[0];
     uint8_t *sk_pk = &sk[CRYPTO_BYTES];
-    uint8_t *sk_S = &sk[(size_t)CRYPTO_BYTES + (size_t)CRYPTO_PUBLICKEYBYTES];
-    uint8_t *sk_pkh = &sk[((size_t)CRYPTO_BYTES + (size_t)CRYPTO_PUBLICKEYBYTES) + (size_t)2*PARAMS_N*PARAMS_NBAR];
-    uint16_t B[PARAMS_N*PARAMS_NBAR] = {0};
-    uint16_t S[2*PARAMS_N*PARAMS_NBAR] = {0};                          // contains secret data
+    uint8_t *sk_S = &sk[CRYPTO_BYTES + CRYPTO_PUBLICKEYBYTES];
+    uint8_t *sk_pkh = &sk[CRYPTO_BYTES + CRYPTO_PUBLICKEYBYTES + 2*PARAMS_N*PARAMS_NBAR];
+    ALIGN_HEADER(32) uint16_t B[PARAMS_N*PARAMS_NBAR] ALIGN_FOOTER(32) = {0};
+    ALIGN_HEADER(32) uint16_t S[2*PARAMS_N*PARAMS_NBAR] ALIGN_FOOTER(32) = {0};                          // contains secret data
 // contains secret data
 #define E ((uint16_t *)&S[PARAMS_N*PARAMS_NBAR])
     uint8_t randomness[CRYPTO_BYTES + BYTES_SEED_SE + BYTES_SEED_A];   // contains secret data via randomness_s and randomness_seedSE
@@ -44,6 +58,10 @@ int crypto_kem_keypair(unsigned char* pk, unsigned char* sk)
     VALGRIND_MAKE_MEM_UNDEFINED(randomness, CRYPTO_BYTES + BYTES_SEED_SE + BYTES_SEED_A);
 #endif
     shake(pk_seedA, BYTES_SEED_A, randomness_z, BYTES_SEED_A);
+#ifndef SCYLLA
+    /* debug("pk_seedA", pk_seedA, BYTES_SEED_A); */
+    /* debug("randomness_z", randomness_z, BYTES_SEED_A); */
+#endif
 
     // Generate S and E, and compute B = A*S + E. Generate A on-the-fly
     shake_input_seedSE[0] = 0x5F;
@@ -78,6 +96,10 @@ int crypto_kem_keypair(unsigned char* pk, unsigned char* sk)
 #ifdef DO_VALGRIND_CHECK
     VALGRIND_MAKE_MEM_DEFINED(randomness, CRYPTO_BYTES + BYTES_SEED_SE + BYTES_SEED_A);
 #endif
+#ifndef SCYLLA
+    /* debug("pk", pk, BYTES_SEED_A + (PARAMS_LOGQ*PARAMS_N*PARAMS_NBAR)/8); */
+    /* debug("sk", sk, (CRYPTO_BYTES + BYTES_SEED_A + (PARAMS_LOGQ*PARAMS_N*PARAMS_NBAR)/8 + 2*PARAMS_N*PARAMS_NBAR + BYTES_PKHASH)); */
+#endif
     return 0;
 #undef E
 #undef pk_b
@@ -102,13 +124,12 @@ int crypto_kem_enc(unsigned char *ct, unsigned char *ss, const unsigned char *pk
 #define Ep ((uint16_t *)&Sp[PARAMS_N*PARAMS_NBAR])
 // contains secret data
 #define Epp ((uint16_t *)&Sp[2*PARAMS_N*PARAMS_NBAR])
-    uint8_t G2in[BYTES_PKHASH + BYTES_MU + BYTES_SALT];                // contains secret data via mu
+    ALIGN_HEADER(32) uint8_t G2in[BYTES_PKHASH + BYTES_MU + BYTES_SALT] ALIGN_FOOTER(32) = { 0 };                // contains secret data via mu
 #define pkh (&G2in[0])
 // contains secret data
 #define mu (&G2in[BYTES_PKHASH])
 #define salt (&G2in[BYTES_PKHASH + BYTES_MU])
     uint8_t G2out[BYTES_SEED_SE + CRYPTO_BYTES];                       // contains secret data
-    uint8_t *k = &G2out[BYTES_SEED_SE];                                // contains secret data
     uint8_t Fin[CRYPTO_CIPHERTEXTBYTES + CRYPTO_BYTES];                // contains secret data via Fin_k
 #define Fin_ct (&Fin[0])
 // contains secret data
@@ -126,6 +147,7 @@ int crypto_kem_enc(unsigned char *ct, unsigned char *ss, const unsigned char *pk
     shake(G2out, BYTES_SEED_SE + CRYPTO_BYTES, G2in, BYTES_PKHASH + BYTES_MU + BYTES_SALT);
 
     uint8_t *seedSE = &G2out[0];                                       // contains secret data
+    uint8_t *k = &G2out[BYTES_SEED_SE];                                // contains secret data
 
     // Generate Sp and Ep, and compute Bp = Sp*A + Ep. Generate A on-the-fly
     shake_input_seedSE[0] = 0x96;
@@ -170,6 +192,11 @@ int crypto_kem_enc(unsigned char *ct, unsigned char *ss, const unsigned char *pk
     VALGRIND_MAKE_MEM_DEFINED(mu, BYTES_MU);
     VALGRIND_MAKE_MEM_DEFINED(pk, CRYPTO_PUBLICKEYBYTES);
 #endif
+#ifndef SCYLLA
+    /* debug("pk", pk, (BYTES_SEED_A + (PARAMS_LOGQ*PARAMS_N*PARAMS_NBAR)/8)); */
+    /* debug("ct", ct, (               (PARAMS_LOGQ*PARAMS_N*PARAMS_NBAR)/8 + (PARAMS_LOGQ*PARAMS_NBAR*PARAMS_NBAR)/8 + BYTES_SALT )); */
+    /* debug("ss", ss, (CRYPTO_BYTES)); */
+#endif
     return 0;
 #undef Ep
 #undef Epp
@@ -198,25 +225,24 @@ int crypto_kem_dec(unsigned char *ss, const unsigned char *ct, const unsigned ch
 // contains secret data
 #define Epp ((uint16_t *)&Sp[2*PARAMS_N*PARAMS_NBAR])
     const uint8_t *ct_c1 = &ct[0];
-    const uint8_t *ct_c2 = &ct[(size_t)(PARAMS_LOGQ*PARAMS_N*PARAMS_NBAR)/8];
+    const uint8_t *ct_c2 = &ct[(PARAMS_LOGQ*PARAMS_N*PARAMS_NBAR)/8];
     const uint8_t *salt = &ct[CRYPTO_CIPHERTEXTBYTES - BYTES_SALT];
+
     const uint8_t *sk_s = &sk[0];
-    const uint8_t *sk_pk = &sk[CRYPTO_BYTES];
-    const uint16_t *sk_S = (const uint16_t*) &sk[CRYPTO_BYTES + CRYPTO_PUBLICKEYBYTES];
-    uint16_t S[PARAMS_N * PARAMS_NBAR];                                // contains secret data
+    /* const uint8_t *sk_pk = &sk[CRYPTO_BYTES]; */
+    const uint8_t *pk_seedA = &sk[CRYPTO_BYTES];
+    const uint8_t *pk_b = &sk[CRYPTO_BYTES + BYTES_SEED_A];
+    const uint8_t *sk_S0 = &sk[CRYPTO_BYTES + CRYPTO_PUBLICKEYBYTES];
+    const uint16_t *sk_S = (const uint16_t*) sk_S0;
     const uint8_t *sk_pkh = &sk[CRYPTO_BYTES + CRYPTO_PUBLICKEYBYTES + 2*PARAMS_N*PARAMS_NBAR];
-    const uint8_t *pk_seedA = &sk_pk[0];
-    const uint8_t *pk_b = &sk_pk[BYTES_SEED_A];
-    uint8_t G2in[BYTES_PKHASH + BYTES_MU + BYTES_SALT];                // contains secret data via muprime
+
+    uint16_t S[PARAMS_N * PARAMS_NBAR];                                // contains secret data
+    ALIGN_HEADER(32) uint8_t G2in[BYTES_PKHASH + BYTES_MU + BYTES_SALT] ALIGN_FOOTER(32) = { 0 };                // contains secret data via muprime
 #define pkh (&G2in[0])
 // contains secret data
 #define muprime (&G2in[BYTES_PKHASH])
 #define G2in_salt (&G2in[BYTES_PKHASH + BYTES_MU])
     uint8_t G2out[BYTES_SEED_SE + CRYPTO_BYTES];                       // contains secret data
-// contains secret data
-#define seedSEprime (&G2out[0])
-// contains secret data
-#define kprime (&G2out[BYTES_SEED_SE])
     uint8_t Fin[CRYPTO_CIPHERTEXTBYTES + CRYPTO_BYTES];                // contains secret data via Fin_k
 #define Fin_ct (&Fin[0])
 // contains secret data
@@ -228,7 +254,7 @@ int crypto_kem_dec(unsigned char *ss, const unsigned char *ct, const unsigned ch
     VALGRIND_MAKE_MEM_UNDEFINED(ct, CRYPTO_CIPHERTEXTBYTES);
 #endif
 
-    for (unsigned int i = 0; i < PARAMS_N * PARAMS_NBAR; i++) {
+    for (size_t i = 0; i < PARAMS_N * PARAMS_NBAR; i++) {
         S[i] = LE_TO_UINT16(sk_S[i]);
     }
 
@@ -244,11 +270,16 @@ int crypto_kem_dec(unsigned char *ss, const unsigned char *ct, const unsigned ch
     memcpy(G2in_salt, salt, BYTES_SALT);
     shake(G2out, BYTES_SEED_SE + CRYPTO_BYTES, G2in, BYTES_PKHASH + BYTES_MU + BYTES_SALT);
 
+// contains secret data
+    uint8_t *seedSEprime = &G2out[0];
+// contains secret data
+    uint8_t *kprime = &G2out[BYTES_SEED_SE];
+
     // Generate Sp and Ep, and compute BBp = Sp*A + Ep. Generate A on-the-fly
     shake_input_seedSEprime[0] = 0x96;
     memcpy(&shake_input_seedSEprime[1], seedSEprime, BYTES_SEED_SE);
     shake((uint8_t*)Sp, (2*PARAMS_N+PARAMS_NBAR)*PARAMS_NBAR*sizeof(uint16_t), shake_input_seedSEprime, 1 + BYTES_SEED_SE);
-    for (unsigned int i = 0; i < (2*PARAMS_N+PARAMS_NBAR)*PARAMS_NBAR; i++) {
+    for (size_t i = 0; i < (2*PARAMS_N+PARAMS_NBAR)*PARAMS_NBAR; i++) {
         Sp[i] = LE_TO_UINT16(Sp[i]);
     }
     frodo_sample_n(Sp, PARAMS_N*PARAMS_NBAR);
@@ -270,13 +301,16 @@ int crypto_kem_dec(unsigned char *ss, const unsigned char *ct, const unsigned ch
     memcpy(Fin_ct, ct, CRYPTO_CIPHERTEXTBYTES);
 
     // Reducing BBp modulo q
-    for (unsigned int i = 0; i < PARAMS_N*PARAMS_NBAR; i++) BBp[i] = BBp[i] & ((1 << PARAMS_LOGQ)-1);
+    for (int i = 0; i < PARAMS_N*PARAMS_NBAR; i++) BBp[i] = BBp[i] & ((1 << PARAMS_LOGQ)-1);
 
     // If (Bp == BBp & C == CC) then ss = F(ct || k'), else ss = F(ct || s)
     // Needs to avoid branching on secret data using constant-time implementation.
     int8_t selector = ct_verify(Bp, BBp, PARAMS_N*PARAMS_NBAR) | ct_verify(C, CC, PARAMS_NBAR*PARAMS_NBAR);
     // If (selector == 0) then load k' to do ss = F(ct || k'), else if (selector == -1) load s to do ss = F(ct || s)
     ct_select((uint8_t*)Fin_k, (uint8_t*)kprime, (uint8_t*)sk_s, CRYPTO_BYTES, selector);
+#ifndef SCYLLA
+    debug("Fin", Fin, CRYPTO_CIPHERTEXTBYTES + CRYPTO_BYTES);
+#endif
     shake(ss, CRYPTO_BYTES, Fin, CRYPTO_CIPHERTEXTBYTES + CRYPTO_BYTES);
 
     // Cleanup:
@@ -292,6 +326,11 @@ int crypto_kem_dec(unsigned char *ss, const unsigned char *ct, const unsigned ch
 #ifdef DO_VALGRIND_CHECK
     VALGRIND_MAKE_MEM_DEFINED(sk, CRYPTO_SECRETKEYBYTES);
     VALGRIND_MAKE_MEM_DEFINED(ct, CRYPTO_CIPHERTEXTBYTES);
+#endif
+#ifndef SCYLLA
+    debug("ct", ct, (                              (PARAMS_LOGQ*PARAMS_N*PARAMS_NBAR)/8 + (PARAMS_LOGQ*PARAMS_NBAR*PARAMS_NBAR)/8 + BYTES_SALT ));
+    debug("sk", sk, (CRYPTO_BYTES + BYTES_SEED_A + (PARAMS_LOGQ*PARAMS_N*PARAMS_NBAR)/8 + 2*PARAMS_N*PARAMS_NBAR + BYTES_PKHASH ));
+    debug("ss", ss, (CRYPTO_BYTES ));
 #endif
     return 0;
 
