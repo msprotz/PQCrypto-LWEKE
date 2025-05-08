@@ -255,7 +255,8 @@ tests-rs: frodo640/test_KEM-rs
 	RUST_BACKTRACE=1 $<
 
 frodo640/test_KEM-rs: tests/test_KEM640.c frodo-rs/target/release/libfrodo_rs.a objs/aes/aes_c.o objs/random/random.o objs/sha3/fips202.o
-	$(CC) $(CFLAGS) $(CFLAGS) $^ -o frodo640/test_KEM-rs
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS) $^ -o $@
 
 frodo-rs/target/release/libfrodo_rs.a: $(wildcard frodo-rs/src/*)
 	cd frodo-rs && cargo build --release
