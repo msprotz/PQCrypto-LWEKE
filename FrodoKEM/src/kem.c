@@ -23,8 +23,8 @@ int crypto_kem_keypair(unsigned char* pk, unsigned char* sk)
     uint8_t *sk_pk = &sk[CRYPTO_BYTES];
     uint8_t *sk_S = &sk[CRYPTO_BYTES + CRYPTO_PUBLICKEYBYTES];
     uint8_t *sk_pkh = &sk[CRYPTO_BYTES + CRYPTO_PUBLICKEYBYTES + 2*PARAMS_N*PARAMS_NBAR];
-    uint16_t B[PARAMS_N*PARAMS_NBAR] = {0};
-    uint16_t S[2*PARAMS_N*PARAMS_NBAR] = {0};                          // contains secret data
+    ALIGN_HEADER(32) uint16_t B[PARAMS_N*PARAMS_NBAR] ALIGN_FOOTER(32) = {0};
+    ALIGN_HEADER(32) uint16_t S[2*PARAMS_N*PARAMS_NBAR] ALIGN_FOOTER(32) = {0};                          // contains secret data
     uint16_t *E = (uint16_t *)&S[PARAMS_N*PARAMS_NBAR];                // contains secret data
     uint8_t randomness[CRYPTO_BYTES + BYTES_SEED_SE + BYTES_SEED_A];   // contains secret data via randomness_s and randomness_seedSE
     uint8_t *randomness_s = &randomness[0];                            // contains secret data
@@ -93,7 +93,7 @@ int crypto_kem_enc(unsigned char *ct, unsigned char *ss, const unsigned char *pk
     ALIGN_HEADER(32) uint16_t Sp[(2*PARAMS_N+PARAMS_NBAR)*PARAMS_NBAR] ALIGN_FOOTER(32) = {0};  // contains secret data
     uint16_t *Ep = (uint16_t *)&Sp[PARAMS_N*PARAMS_NBAR];              // contains secret data
     uint16_t *Epp = (uint16_t *)&Sp[2*PARAMS_N*PARAMS_NBAR];           // contains secret data
-    uint8_t G2in[BYTES_PKHASH + BYTES_MU + BYTES_SALT];                // contains secret data via mu
+    ALIGN_HEADER(32) uint8_t G2in[BYTES_PKHASH + BYTES_MU + BYTES_SALT] ALIGN_FOOTER(32);                // contains secret data via mu
     uint8_t *pkh = &G2in[0];
     uint8_t *mu = &G2in[BYTES_PKHASH];                                 // contains secret data
     uint8_t *salt = &G2in[BYTES_PKHASH + BYTES_MU];
@@ -184,7 +184,7 @@ int crypto_kem_dec(unsigned char *ss, const unsigned char *ct, const unsigned ch
     const uint8_t *sk_pkh = &sk[CRYPTO_BYTES + CRYPTO_PUBLICKEYBYTES + 2*PARAMS_N*PARAMS_NBAR];
     const uint8_t *pk_seedA = &sk_pk[0];
     const uint8_t *pk_b = &sk_pk[BYTES_SEED_A];
-    uint8_t G2in[BYTES_PKHASH + BYTES_MU + BYTES_SALT];                // contains secret data via muprime
+    ALIGN_HEADER(32) uint8_t G2in[BYTES_PKHASH + BYTES_MU + BYTES_SALT] ALIGN_FOOTER(32);                // contains secret data via muprime
     uint8_t *pkh = &G2in[0];
     uint8_t *muprime = &G2in[BYTES_PKHASH];                            // contains secret data
     uint8_t *G2in_salt = &G2in[BYTES_PKHASH + BYTES_MU];
